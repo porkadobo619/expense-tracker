@@ -2,12 +2,12 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from app.domain.repository import InMemoryTransactionRepository
+from app.domain.sqlite_repository import SqliteTransactionRepository
 from app.domain.service import ExpenseTrackerService
 
 app = FastAPI(title="Expense Service", version="1.0.0")
 
-repository = InMemoryTransactionRepository()
+repository = SqliteTransactionRepository("expense_tracker.db")
 service = ExpenseTrackerService(repository)
 
 

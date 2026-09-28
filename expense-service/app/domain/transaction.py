@@ -24,6 +24,10 @@ class Transaction(ABC):
     def date(self):
         return self._date
 
+    @property
+    def note(self):
+        return self._note
+
     @abstractmethod
     def signed_amount(self) -> int:
         ...
