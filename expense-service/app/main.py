@@ -4,6 +4,7 @@ from datetime import date
 
 from fastapi import FastAPI, HTTPException, Path, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.domain.sqlite_repository import SqliteTransactionRepository
@@ -62,6 +63,13 @@ def create_app(db_path: str = "expense_tracker.db") -> FastAPI:
         if not service.delete_transaction(transaction_id):
             raise HTTPException(status_code=404, detail="Transaction not found")
         return {"deleted": True}
+
+    @app.get("/transactions/{year}/{month}")
+    def list_transactions(
+        year: int = Path(ge=1900, le=2200),
+        month: int = Path(ge=1, le=12),
+    ):
+        return service.list_transactions(year, month)
 
     @app.get("/summary/{year}/{month}")
     def monthly_summary(

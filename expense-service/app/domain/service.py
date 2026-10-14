@@ -24,6 +24,20 @@ class ExpenseTrackerService:
     def set_budget(self, category: str, limit_pesos: float) -> None:
         self._budgets[category] = Budget(category, Money.of(limit_pesos))
 
+    def list_transactions(self, year: int, month: int) -> list[dict]:
+        items = self._repository.list_by_month_with_ids(year, month)
+        result = []
+        for tx_id, tx in items:
+            result.append({
+                "id": tx_id,
+                "type": "income" if isinstance(tx, Income) else "expense",
+                "amount_centavos": tx.amount.centavos,
+                "category": tx.category,
+                "date": tx.date.isoformat(),
+                "note": tx.note,
+            })
+        return result
+
     def monthly_summary(self, year: int, month: int) -> dict:
         transactions = self._repository.list_by_month(year, month)
         total_income = Money(0)

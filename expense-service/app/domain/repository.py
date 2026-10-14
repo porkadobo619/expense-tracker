@@ -1,6 +1,4 @@
-﻿import uuid
-from abc import ABC, abstractmethod
-from datetime import date
+﻿from abc import ABC, abstractmethod
 from typing import Optional
 from .transaction import Transaction
 
@@ -19,6 +17,10 @@ class TransactionRepository(ABC):
         ...
 
     @abstractmethod
+    def list_by_month_with_ids(self, year: int, month: int) -> list[tuple[str, Transaction]]:
+        ...
+
+    @abstractmethod
     def delete(self, transaction_id: str) -> bool:
         ...
 
@@ -28,6 +30,7 @@ class InMemoryTransactionRepository(TransactionRepository):
         self._items: dict[str, Transaction] = {}
 
     def add(self, transaction: Transaction) -> str:
+        import uuid
         transaction_id = str(uuid.uuid4())
         self._items[transaction_id] = transaction
         return transaction_id
@@ -38,6 +41,12 @@ class InMemoryTransactionRepository(TransactionRepository):
     def list_by_month(self, year: int, month: int) -> list[Transaction]:
         return [
             tx for tx in self._items.values()
+            if tx.date.year == year and tx.date.month == month
+        ]
+
+    def list_by_month_with_ids(self, year: int, month: int) -> list[tuple[str, Transaction]]:
+        return [
+            (tx_id, tx) for tx_id, tx in self._items.items()
             if tx.date.year == year and tx.date.month == month
         ]
 

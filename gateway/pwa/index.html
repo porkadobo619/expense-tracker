@@ -1,8 +1,277 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Expense Tracker</title></head>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<style>
+  :root {
+    --ink: #14171c; --paper: #fafaf8; --green: #1f7a4d; --sage: #5fae83;
+    --mute: #6b7280; --line: #d8dcd6; --amber: #b5761e; --white: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, Segoe UI, Calibri, sans-serif;
+    background: var(--paper); color: var(--ink);
+  }
+  header {
+    background: var(--ink); color: white; padding: 20px 16px;
+  }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: #9aa0a8; font-size: 13px; }
+  main { max-width: 780px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 6px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 15px; color: var(--green); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 100px; }
+  label { display: block; font-size: 12px; color: var(--mute); margin-bottom: 3px; }
+  input, select {
+    width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px;
+    font-size: 14px; margin-bottom: 10px;
+  }
+  button {
+    background: var(--green); color: white; border: none; padding: 9px 16px;
+    border-radius: 4px; font-size: 14px; cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+  button.danger { background: var(--amber); padding: 5px 10px; font-size: 12px; }
+  .summary-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat { flex: 1; min-width: 120px; padding: 10px; background: #f4f7f4; border-radius: 4px; }
+  .stat .label { font-size: 11px; color: var(--mute); text-transform: uppercase; }
+  .stat .value { font-size: 20px; font-weight: bold; margin-top: 2px; }
+  .stat.income .value { color: var(--green); }
+  .stat.expense .value { color: var(--amber); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--mute); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  .tag { font-size: 11px; padding: 2px 6px; border-radius: 10px; }
+  .tag.expense { background: #fbe9d6; color: var(--amber); }
+  .tag.income { background: #dcf0e3; color: var(--green); }
+  .empty { color: var(--mute); font-style: italic; padding: 16px 0; text-align: center; }
+  .status-msg { font-size: 13px; padding: 8px; border-radius: 4px; margin-bottom: 10px; }
+  .status-msg.error { background: #fde8e8; color: #b5281e; }
+  .status-msg.ok { background: #dcf0e3; color: var(--green); }
+</style>
+</head>
 <body>
-<h1>Expense Tracker</h1>
-<p>PWA coming in Week 4. API docs: <a href="/docs">/docs</a></p>
+
+<header>
+  <h1>Expense Tracker</h1>
+  <p>Personal money management &mdash; OOP microservice demo</p>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Add a transaction</h2>
+    <div id="form-msg"></div>
+    <form id="tx-form">
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="tx-type">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+        </div>
+        <div>
+          <label>Amount (PHP)</label>
+          <input type="number" id="tx-amount" step="0.01" min="0.01" required>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Category</label>
+          <input type="text" id="tx-category" placeholder="Food, Bills, Salary..." required>
+        </div>
+        <div>
+          <label>Date</label>
+          <input type="date" id="tx-date" required>
+        </div>
+      </div>
+      <label>Note (optional)</label>
+      <input type="text" id="tx-note" placeholder="lunch with friends">
+      <button type="submit">Add transaction</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Month</h2>
+    <div class="row">
+      <div>
+        <label>Year</label>
+        <input type="number" id="sel-year">
+      </div>
+      <div>
+        <label>Month</label>
+        <input type="number" id="sel-month" min="1" max="12">
+      </div>
+    </div>
+    <button id="load-btn" type="button">Load month</button>
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <div class="summary-grid">
+      <div class="stat income"><div class="label">Income</div><div class="value" id="sum-income">PHP 0.00</div></div>
+      <div class="stat expense"><div class="label">Expense</div><div class="value" id="sum-expense">PHP 0.00</div></div>
+      <div class="stat"><div class="label">Net</div><div class="value" id="sum-net">PHP 0.00</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Set a budget</h2>
+    <div class="row">
+      <div>
+        <label>Category</label>
+        <input type="text" id="budget-category" placeholder="Food">
+      </div>
+      <div>
+        <label>Limit (PHP)</label>
+        <input type="number" id="budget-limit" step="0.01" min="0.01">
+      </div>
+    </div>
+    <button id="budget-btn" type="button">Save budget</button>
+    <button id="budget-check-btn" type="button" style="background: var(--mute); margin-left: 6px;">Check status</button>
+    <div id="budget-result" style="margin-top: 10px; font-size: 13px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Transactions this month</h2>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr>
+      </thead>
+      <tbody id="tx-list"></tbody>
+    </table>
+    <div id="tx-empty" class="empty" style="display:none;">No transactions yet this month.</div>
+  </div>
+
+</main>
+
+<script>
+const API = "/api";
+
+function peso(centavos) {
+  return "PHP " + (centavos / 100).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function currentYearMonth() {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+}
+
+const { year: initYear, month: initMonth } = currentYearMonth();
+document.getElementById("sel-year").value = initYear;
+document.getElementById("sel-month").value = initMonth;
+document.getElementById("tx-date").value = todayISO();
+
+async function loadMonth() {
+  const year = document.getElementById("sel-year").value;
+  const month = document.getElementById("sel-month").value;
+
+  const summaryResp = await fetch(`${API}/summary/${year}/${month}`);
+  const summary = await summaryResp.json();
+  document.getElementById("sum-income").textContent = peso(summary.total_income_centavos);
+  document.getElementById("sum-expense").textContent = peso(summary.total_expense_centavos);
+  document.getElementById("sum-net").textContent = peso(summary.net_centavos);
+
+  const txResp = await fetch(`${API}/transactions/${year}/${month}`);
+  const transactions = await txResp.json();
+  const tbody = document.getElementById("tx-list");
+  const empty = document.getElementById("tx-empty");
+  tbody.innerHTML = "";
+
+  if (!transactions.length) {
+    empty.style.display = "block";
+  } else {
+    empty.style.display = "none";
+    transactions.forEach(tx => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${tx.date}</td>
+        <td><span class="tag ${tx.type}">${tx.type}</span></td>
+        <td>${tx.category}</td>
+        <td>${peso(tx.amount_centavos)}</td>
+        <td>${tx.note || ""}</td>
+        <td><button class="danger" data-id="${tx.id}">Delete</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("button.danger").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await fetch(`${API}/transactions/${btn.dataset.id}`, { method: "DELETE" });
+        loadMonth();
+      });
+    });
+  }
+}
+
+document.getElementById("load-btn").addEventListener("click", loadMonth);
+
+document.getElementById("tx-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const type = document.getElementById("tx-type").value;
+  const amount = parseFloat(document.getElementById("tx-amount").value);
+  const category = document.getElementById("tx-category").value;
+  const date = document.getElementById("tx-date").value;
+  const note = document.getElementById("tx-note").value;
+  const msgBox = document.getElementById("form-msg");
+
+  const endpoint = type === "income" ? "income" : "expenses";
+  const resp = await fetch(`${API}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount, category, date, note }),
+  });
+
+  if (resp.ok) {
+    msgBox.innerHTML = `<div class="status-msg ok">Added.</div>`;
+    document.getElementById("tx-form").reset();
+    document.getElementById("tx-date").value = todayISO();
+    loadMonth();
+  } else {
+    const err = await resp.json();
+    msgBox.innerHTML = `<div class="status-msg error">${err.detail || "Could not add transaction."}</div>`;
+  }
+});
+
+document.getElementById("budget-btn").addEventListener("click", async () => {
+  const category = document.getElementById("budget-category").value;
+  const limit = parseFloat(document.getElementById("budget-limit").value);
+  if (!category || !limit) return;
+  await fetch(`${API}/budgets`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, limit }),
+  });
+  document.getElementById("budget-result").textContent = `Budget set for ${category}.`;
+});
+
+document.getElementById("budget-check-btn").addEventListener("click", async () => {
+  const category = document.getElementById("budget-category").value;
+  const year = document.getElementById("sel-year").value;
+  const month = document.getElementById("sel-month").value;
+  if (!category) return;
+  const resp = await fetch(`${API}/budgets/${category}/${year}/${month}`);
+  const result = await resp.json();
+  const box = document.getElementById("budget-result");
+  if (!result.has_budget) {
+    box.textContent = `No budget set for ${category} yet.`;
+  } else {
+    box.textContent = `${category}: spent ${peso(result.spent_centavos)} of ${peso(result.limit_centavos)} (${result.status})`;
+  }
+});
+
+loadMonth();
+</script>
+
 </body>
 </html>

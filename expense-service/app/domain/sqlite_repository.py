@@ -55,14 +55,17 @@ class SqliteTransactionRepository(TransactionRepository):
         return self._row_to_transaction(row) if row else None
 
     def list_by_month(self, year: int, month: int) -> list[Transaction]:
+        return [tx for _, tx in self.list_by_month_with_ids(year, month)]
+
+    def list_by_month_with_ids(self, year: int, month: int) -> list[tuple[str, Transaction]]:
         conn = self._connect()
         prefix = f"{year:04d}-{month:02d}"
         rows = conn.execute(
-            "SELECT type, centavos, category, date, note FROM transactions WHERE date LIKE ?",
+            "SELECT id, type, centavos, category, date, note FROM transactions WHERE date LIKE ? ORDER BY date DESC",
             (f"{prefix}%",),
         ).fetchall()
         conn.close()
-        return [self._row_to_transaction(row) for row in rows]
+        return [(row[0], self._row_to_transaction(row[1:])) for row in rows]
 
     def delete(self, transaction_id: str) -> bool:
         conn = self._connect()
